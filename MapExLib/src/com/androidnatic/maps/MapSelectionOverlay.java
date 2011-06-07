@@ -30,6 +30,7 @@ import android.graphics.Paint;
 import android.graphics.Point;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffXfermode;
+import android.graphics.Rect;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.view.MotionEvent;
@@ -45,11 +46,14 @@ public class MapSelectionOverlay extends Overlay {
 	private Bitmap layer;
 	private BitmapDrawable on, off;
 	private Point topLeft;
+	
 	private Point bottomRight;
 	private Point finger;
 	private Mode mode = Mode.RESIZE;
 	private Paint clearPaint;
+	private int padding;
 	private int color;
+	private Rect activateRect;
 	private DashPathEffect dashPath = new DashPathEffect(new float[]{20,5}, 1);
 	private MapView mapview;
 	
@@ -61,7 +65,7 @@ public class MapSelectionOverlay extends Overlay {
 	public MapSelectionOverlay(Context context, int color){
 		this.color = color;
 		clearPaint = new Paint();
-		
+		this.padding = 10;
 		this.on = (BitmapDrawable) context.getResources().getDrawable(R.drawable.pencil_on);
 		this.off = (BitmapDrawable) context.getResources().getDrawable(R.drawable.pencil_off);
 		clearPaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.CLEAR));
@@ -77,14 +81,20 @@ public class MapSelectionOverlay extends Overlay {
 		if(layer != null){
 			canvas.drawBitmap(layer, 0,0,null);
 			Bitmap pencil = (override ? on.getBitmap() : off.getBitmap());
-			canvas.drawBitmap(pencil,(mapview.getWidth()-15-pencil.getWidth()),(mapview.getHeight()-15-pencil.getHeight()), null);
+			canvas.drawBitmap(pencil,(mapview.getWidth()-padding-pencil.getWidth()),(mapview.getHeight()-padding-pencil.getHeight()), null);
+			this.activateRect = new Rect(mapview.getWidth()-padding-pencil.getWidth(),mapview.getHeight()-padding-pencil.getHeight(),mapview.getWidth()-padding,mapview.getHeight()-padding);
 		}
 	}
 
 	@Override
 	public boolean onTouchEvent(MotionEvent e, MapView mapView) {
+		
 		switch (e.getAction()) {
 		case MotionEvent.ACTION_DOWN:
+			if(activateRect != null && activateRect.contains((int)e.getX(), (int)e.getY())){
+				this.override = !this.override;
+				return override;
+			}
 			if(insideBounds(e.getX(), e.getY())){
 				mode = Mode.DRAG;
 				finger = new Point((int)e.getX(), (int)e.getY());
@@ -137,6 +147,8 @@ public class MapSelectionOverlay extends Overlay {
 			return false;
 		return ((x >= topLeft.x && x <= bottomRight.x) && (y >= topLeft.y && y <= bottomRight.y));
 	}
+	
+	
 	
 	private void drawRectangle(){
 		if(layer == null){
