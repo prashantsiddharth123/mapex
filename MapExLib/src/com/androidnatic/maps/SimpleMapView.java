@@ -58,6 +58,7 @@ public class SimpleMapView extends MapView {
 	 * @return
 	 */
 	public int[][] getBounds() {
+		
 		GeoPoint center = getMapCenter();
 		int latitudeSpan = getLatitudeSpan();
 		int longtitudeSpan = getLongitudeSpan();
