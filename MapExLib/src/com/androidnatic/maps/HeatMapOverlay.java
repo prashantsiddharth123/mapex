@@ -21,16 +21,22 @@
  */
 package com.androidnatic.maps;
 
+import java.util.List;
+
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Point;
 import android.graphics.RadialGradient;
 import android.graphics.Shader.TileMode;
 import android.view.MotionEvent;
 
+import com.androidnatic.maps.model.HeatPoint;
+import com.google.android.maps.GeoPoint;
 import com.google.android.maps.MapView;
 import com.google.android.maps.Overlay;
+import com.google.android.maps.Projection;
 
 /**
  * @author evincar
@@ -39,10 +45,12 @@ import com.google.android.maps.Overlay;
 public class HeatMapOverlay extends Overlay {
 	
 	private Bitmap layer;
-	
+	private float radius;
+	private MapView mapView;
 	
 	public HeatMapOverlay(float radius, MapView mapview){
-		
+		this.radius = radius;
+		this.mapView = mapview;
 	}
 
 	@Override
@@ -67,10 +75,10 @@ public class HeatMapOverlay extends Overlay {
 	}
 	
 	
-	public void update(){
-		
-	}
-	
+	public void update(List<HeatPoint> points){
+		float pxRadius = (float) (mapView.getProjection().metersToEquatorPixels(radius) * 1/Math.cos(Math.toRadians(mapView.getMapCenter().getLatitudeE6()/1E6)));
+		HeatTask task = new HeatTask(mapView.getWidth(), mapView.getHeight(), pxRadius, points);
+	}	
 	
 	private class HeatTask implements Runnable{
 		
@@ -79,8 +87,9 @@ public class HeatMapOverlay extends Overlay {
 		private int width;
 		private int height;
 		private float radius;
+		private List<HeatPoint> points;
 		
-		public HeatTask(int width, int height, float radius){
+		public HeatTask(int width, int height, float radius, List<HeatPoint> points){
 			backbuffer = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
 			myCanvas = new Canvas(backbuffer);
 			Paint p = new Paint();
@@ -88,17 +97,26 @@ public class HeatMapOverlay extends Overlay {
 			p.setColor(Color.TRANSPARENT);
 			this.width = width;
 			this.height = height;
+			this.points = points;
 			myCanvas.drawRect(0, 0, width, height, p);
 			this.radius = radius;
 		}
 		
 		@Override
 		public void run() {
+			Projection proj = mapView.getProjection();
 			
+			Point out = new Point(1, 1);
+			for(HeatPoint p : points){
+				GeoPoint in = new GeoPoint((int)(p.lat*1E6),(int)(p.lon*1E6));
+				proj.toPixels(in, out);
+				addPoint(out.x, out.y, p.intensity);
+			}
 			colorize(0, 0);
 			synchronized (layer) {
 				layer = backbuffer;
 			}
+			mapView.postInvalidate();
 		}
 		
 		
