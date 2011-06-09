@@ -64,11 +64,11 @@ public class SimpleMapView extends MapView {
 		int longtitudeSpan = getLongitudeSpan();
 		int[][] bounds = new int[2][2];
 
-		bounds[0][0] = center.getLatitudeE6() + (latitudeSpan / 2);
-		bounds[0][1] = center.getLongitudeE6() + (longtitudeSpan / 2);
+		bounds[0][0] = center.getLatitudeE6() - (latitudeSpan / 2);
+		bounds[0][1] = center.getLongitudeE6() - (longtitudeSpan / 2);
 
-		bounds[1][0] = center.getLatitudeE6() - (latitudeSpan / 2);
-		bounds[1][1] = center.getLongitudeE6() - (longtitudeSpan / 2);
+		bounds[1][0] = center.getLatitudeE6() + (latitudeSpan / 2);
+		bounds[1][1] = center.getLongitudeE6() + (longtitudeSpan / 2);
 		return bounds;
 	}
 	
