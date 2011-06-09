@@ -22,6 +22,7 @@
 package com.androidnatic.maps;
 
 import java.util.List;
+import java.util.concurrent.locks.ReentrantLock;
 
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -39,7 +40,8 @@ import com.google.android.maps.Overlay;
 import com.google.android.maps.Projection;
 
 /**
- * @author evincar
+ * @author Vinicius Carvalho
+ * An overlay that draws a heatmap using a set of HeatPoints provided at the update method.
  *
  */
 public class HeatMapOverlay extends Overlay {
@@ -47,10 +49,12 @@ public class HeatMapOverlay extends Overlay {
 	private Bitmap layer;
 	private float radius;
 	private MapView mapView;
+	private ReentrantLock lock;
 	
 	public HeatMapOverlay(float radius, MapView mapview){
 		this.radius = radius;
 		this.mapView = mapview;
+		this.lock = new ReentrantLock();
 	}
 
 	@Override
@@ -66,18 +70,23 @@ public class HeatMapOverlay extends Overlay {
 	public boolean onTouchEvent(MotionEvent e, MapView mapView) {
 		
 		if(e.getAction() == MotionEvent.ACTION_DOWN){
-			synchronized (layer) {
-				this.layer = null;	
-			}
+			lock.lock();
+			this.layer = null;	
+			lock.unlock();
 		}
 		
 		return super.onTouchEvent(e, mapView);
 	}
 	
-	
+	/**
+	 * Updates the heatmap canvas. Note that for each point, it's lat/lon values should be in decimal format, not 1E6 as used by
+	 * GoogleMaps. The class will convert it.
+	 * @param points
+	 */
 	public void update(List<HeatPoint> points){
 		float pxRadius = (float) (mapView.getProjection().metersToEquatorPixels(radius) * 1/Math.cos(Math.toRadians(mapView.getMapCenter().getLatitudeE6()/1E6)));
 		HeatTask task = new HeatTask(mapView.getWidth(), mapView.getHeight(), pxRadius, points);
+		new Thread(task).start();
 	}	
 	
 	private class HeatTask implements Runnable{
@@ -113,9 +122,9 @@ public class HeatMapOverlay extends Overlay {
 				addPoint(out.x, out.y, p.intensity);
 			}
 			colorize(0, 0);
-			synchronized (layer) {
-				layer = backbuffer;
-			}
+			lock.lock();
+			layer = backbuffer;
+			lock.unlock();
 			mapView.postInvalidate();
 		}
 		
